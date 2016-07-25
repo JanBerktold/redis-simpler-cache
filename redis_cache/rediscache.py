@@ -227,7 +227,7 @@ class SimpleCache(object):
                         pipe.srem(self.get_set_name(), cache_key)
                 pipe.execute()
 
-            return {k: v for (k, v) in zip(keys, values) if v is not None}
+            return dict((k,v ) for k, v in zip(keys, values) if v is not None)
 
     def get_json(self, key):
         return json.loads(self.get(key))
