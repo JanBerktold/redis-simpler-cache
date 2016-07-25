@@ -1,11 +1,11 @@
-# redis-simple-cache
+# redis-simple-cache [![Build Status](https://travis-ci.org/JanBerktold/redis-simpler-cache.svg?branch=master)](https://travis-ci.org/JanBerktold/redis-simpler-cache)
 redis-simple-cache is a pythonic interface for creating a cache over redis.  
 It provides simple decorators that can be added to any function to cache its return values.
 
 Requirements:
 -------------
-redis 2.6.2  
-redis-py 2.7.1 (see requirements.txt file)
+    redis 2.6.2  
+    redis-py 2.7.1 (see requirements.txt file)
 
 Installation:
 -------------
@@ -70,22 +70,6 @@ Advanced users can customize the decorators even more by passing a SimpleCache o
 `host`, `port` and `db` are the same redis config params used in StrictRedis class of redis-py.
 By default, the `namespace` is the name of the module from which the decorated function is called, but it can be overridden with the `namespace` parameter. 
 
-AUTHOR: Vivek Narayanan  
-
-CONTRIBUTORS: 
-
-Flávio Juvenal
-
-Sam Zaydel  
-
-David Ng
-
-DJ Gilcrease
-
-Johannes Maximilian Toball
-
-Robert Marshall
-
-Ben Hayden
-
+ORIGINAL AUTHOR: Vivek Narayanan  
+CONTRIBUTORS: Flávio Juvenal, Sam Zaydel, David Ng, DJ Gilcrease, Johannes Maximilian Toball, Robert Marshall, Ben Hayden
 LICENSE: BSD
