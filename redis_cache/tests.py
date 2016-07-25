@@ -5,6 +5,20 @@ from rediscache import SimpleCache, RedisConnect, cache_it, cache_it_json, Cache
 from unittest import TestCase, main
 import time
 
+class RedisTestCase(TestCase):
+
+    def setUp(self):
+        self.c = SimpleCache(10)
+        self.assertIsNotNone(self.c.connection)
+        self.redis = RedisConnect().connect()
+
+    def tearDown(self):
+        self.c.flush()
+
+    # Implement assertIsNotNone for Python runtimes < 2.7 or < 3.1
+    if not hasattr(TestCase, 'assertIsNotNone'):
+        def assertIsNotNone(self, value, *args):
+            self.assertNotEqual(value, None, *args)
 
 class ComplexNumber(object):  # used in pickle test
     def __init__(self, real, imag):
@@ -15,12 +29,7 @@ class ComplexNumber(object):  # used in pickle test
         return self.real == other.real and self.imag == other.imag
 
 
-class SimpleCacheTest(TestCase):
-
-    def setUp(self):
-        self.c = SimpleCache(10)  # Cache that has a maximum limit of 10 keys
-        self.assertIsNotNone(self.c.connection)
-        self.redis = RedisConnect().connect()
+class SimpleCacheTest(RedisTestCase):
 
     def test_expire(self):
         quick_c = SimpleCache()
@@ -179,21 +188,7 @@ class SimpleCacheTest(TestCase):
         self.assertTrue("d2" not in d)
         self.assertEqual(d["d3"], "ddd")
 
-    def tearDown(self):
-        self.c.flush()
-
-
-
-
-class CacheDecoratorTest(TestCase):
-
-    def setUp(self):
-        self.c = SimpleCache(10)
-        self.assertIsNotNone(self.c.connection)
-        self.redis = RedisConnect().connect()
-
-    def tearDown(self):
-        self.c.flush()
+class CacheDecoratorTest(RedisTestCase):
 
     def test_decorator_do_not_cache(self):
         @cache_it(cache=self.c)
