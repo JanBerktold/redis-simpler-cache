@@ -4,7 +4,7 @@ python:
   - "2.7"
 services:
   - redis-server
-script: python tests/tests.py
+script: python redis_cache/tests.py
 branches:
   only:
     - master
