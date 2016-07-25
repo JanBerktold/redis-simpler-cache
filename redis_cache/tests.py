@@ -5,6 +5,7 @@ from rediscache import SimpleCache, RedisConnect, cache_it, cache_it_json, Cache
 from unittest import TestCase, main
 import time
 
+
 class ComplexNumber(object):  # used in pickle test
     def __init__(self, real, imag):
         self.real = real
@@ -20,6 +21,7 @@ class SimpleCacheTest(TestCase):
         self.c = SimpleCache(10)  # Cache that has a maximum limit of 10 keys
         self.assertIsNotNone(self.c.connection)
         self.redis = RedisConnect().connect()
+
     def test_expire(self):
         quick_c = SimpleCache()
 
@@ -36,17 +38,6 @@ class SimpleCacheTest(TestCase):
     def test_miss(self):
         self.assertRaises(CacheMissException, self.c.get, "blablabla")
 
-    def test_kwargs_decorator(self):
-        @cache_it_json(cache=self.c)
-        def add_it(a, b=10, c=5):
-            return a + b + c
-        add_it(3)
-        self.assertEqual(add_it(3), 18)
-        add_it(5, b=7)
-        self.assertEqual(add_it(5, b=7), 17)
-        add_it(6, c=3)
-        self.assertEqual(add_it(6, c=3), 19)
-
     def test_store_retrieve(self):
         self.c.store("foo", "bar")
         foo = self.c.get("foo")
@@ -61,110 +52,6 @@ class SimpleCacheTest(TestCase):
         payload = ComplexNumber(3,4)
         self.c.store_pickle("pickle", payload)
         self.assertEqual(self.c.get_pickle("pickle"), payload)
-
-    def test_decorator(self):
-        self.redis.flushall()
-        mutable = []
-        @cache_it(cache=self.c)
-        def append(n):
-            mutable.append(n)
-            return mutable
-        append(1)
-        len_before = len(mutable)
-        mutable_cached = append(1)
-        len_after = len(mutable)
-        self.assertEqual(len_before, len_after)
-        self.assertNotEqual(id(mutable), id(mutable_cached))
-        self.assertEqual(mutable, mutable_cached)
-
-    def test_decorator_do_not_cache(self):
-        @cache_it(cache=self.c)
-        def test_no_cache(n):
-            result = n * 10
-            raise DoNotCache(result)
-
-        keys_before = len(self.c.keys())
-        r1 = test_no_cache(20)
-        r2 = test_no_cache(10)
-        r3 = test_no_cache(30)
-        r4 = test_no_cache(20)
-
-        self.assertEqual(r1, (10 * 20))
-        self.assertEqual(r2, (10 * 10))
-        self.assertEqual(r3, (10 * 30))
-        self.assertEqual(r4, (10 * 20))
-
-        keys_after = len(self.c.keys())
-
-        self.assertEqual(keys_before, keys_after)
-
-    def test_decorator_do_not_cache_reraised(self):
-        @cache_it(cache=self.c)
-        def test_no_cache(n):
-            result = n * 10
-            try:
-                raise DoNotCache(result)
-            except DoNotCache as e:
-                raise e
-            except Exception:
-                pass
-
-        keys_before = len(self.c.keys())
-        r1 = test_no_cache(20)
-        r2 = test_no_cache(10)
-        r3 = test_no_cache(30)
-        r4 = test_no_cache(20)
-
-        self.assertEqual(r1, (10 * 20))
-        self.assertEqual(r4, (10 * 20))
-        self.assertEqual(r2, (10 * 10))
-        self.assertEqual(r3, (10 * 30))
-
-        keys_after = len(self.c.keys())
-
-        self.assertEqual(keys_before, keys_after)
-
-    def test_decorator_do_not_cache_wrapping_exception(self):
-        @cache_it(cache=self.c)
-        def test_no_cache(n):
-            try:
-                result = n / 0
-            except ZeroDivisionError as e:
-                raise DoNotCache(e)
-
-        keys_before = len(self.c.keys())
-        r1 = test_no_cache(20)
-        self.assertTrue(isinstance(r1, ZeroDivisionError))
-        keys_after = len(self.c.keys())
-        self.assertEqual(keys_before, keys_after)
-
-    def test_decorator_json(self):
-        import random
-
-        mutable = {}
-        @cache_it_json(cache=self.c)
-        def set_key(n):
-            mutable[str(random.random())] = n
-            return mutable
-        set_key('a')
-        len_before = len(mutable)
-        mutable_cached = set_key('a')
-        len_after = len(mutable)
-        self.assertEqual(len_before, len_after)
-        self.assertNotEqual(id(mutable), id(mutable_cached))
-        self.assertEqual(mutable, mutable_cached)
-
-    def test_decorator_complex_type(self):
-        import math
-
-        @cache_it(cache=self.c)
-        def add(x, y):
-            return ComplexNumber(x.real + y.real, x.imag + y.imag)
-        result = add(ComplexNumber(3,4), ComplexNumber(4,5))
-        result_cached = add(ComplexNumber(3,4), ComplexNumber(4,5))
-        self.assertNotEqual(id(result), id(result_cached))
-        self.assertEqual(result, result_cached)
-        self.assertEqual(result, complex(3,4) + complex(4,5))
 
     def test_cache_limit(self):
         for i in range(100):
@@ -294,5 +181,152 @@ class SimpleCacheTest(TestCase):
 
     def tearDown(self):
         self.c.flush()
+
+
+
+
+class CacheDecoratorTest(TestCase):
+
+    def setUp(self):
+        self.c = SimpleCache(10)
+        self.assertIsNotNone(self.c.connection)
+        self.redis = RedisConnect().connect()
+
+    def tearDown(self):
+        self.c.flush()
+
+    def test_decorator_do_not_cache(self):
+        @cache_it(cache=self.c)
+        def test_no_cache(n):
+            result = n * 10
+            raise DoNotCache(result)
+
+        keys_before = len(self.c.keys())
+        r1 = test_no_cache(20)
+        r2 = test_no_cache(10)
+        r3 = test_no_cache(30)
+        r4 = test_no_cache(20)
+
+        self.assertEqual(r1, (10 * 20))
+        self.assertEqual(r2, (10 * 10))
+        self.assertEqual(r3, (10 * 30))
+        self.assertEqual(r4, (10 * 20))
+
+        keys_after = len(self.c.keys())
+
+        self.assertEqual(keys_before, keys_after)
+
+    def test_decorator_do_not_cache_reraised(self):
+        @cache_it(cache=self.c)
+        def test_no_cache(n):
+            result = n * 10
+            try:
+                raise DoNotCache(result)
+            except DoNotCache as e:
+                raise e
+            except Exception:
+                pass
+
+        keys_before = len(self.c.keys())
+        r1 = test_no_cache(20)
+        r2 = test_no_cache(10)
+        r3 = test_no_cache(30)
+        r4 = test_no_cache(20)
+
+        self.assertEqual(r1, (10 * 20))
+        self.assertEqual(r4, (10 * 20))
+        self.assertEqual(r2, (10 * 10))
+        self.assertEqual(r3, (10 * 30))
+
+        keys_after = len(self.c.keys())
+
+        self.assertEqual(keys_before, keys_after)
+
+    def test_kwargs_decorator(self):
+        @cache_it_json(cache=self.c)
+        def add_it(a, b=10, c=5):
+            return a + b + c
+        add_it(3)
+        self.assertEqual(add_it(3), 18)
+        add_it(5, b=7)
+        self.assertEqual(add_it(5, b=7), 17)
+        add_it(6, c=3)
+        self.assertEqual(add_it(6, c=3), 19)
+
+    def test_decorator(self):
+        self.redis.flushall()
+        mutable = []
+        @cache_it(cache=self.c)
+        def append(n):
+            mutable.append(n)
+            return mutable
+        append(1)
+        len_before = len(mutable)
+        mutable_cached = append(1)
+        len_after = len(mutable)
+        self.assertEqual(len_before, len_after)
+        self.assertNotEqual(id(mutable), id(mutable_cached))
+        self.assertEqual(mutable, mutable_cached)
+
+    def test_decorator_do_not_cache_wrapping_exception(self):
+        @cache_it(cache=self.c)
+        def test_no_cache(n):
+            try:
+                result = n / 0
+            except ZeroDivisionError as e:
+                raise DoNotCache(e)
+
+        keys_before = len(self.c.keys())
+        r1 = test_no_cache(20)
+        self.assertTrue(isinstance(r1, ZeroDivisionError))
+        keys_after = len(self.c.keys())
+        self.assertEqual(keys_before, keys_after)
+
+    def test_decorator_json(self):
+        import random
+
+        mutable = {}
+        @cache_it_json(cache=self.c)
+        def set_key(n):
+            mutable[str(random.random())] = n
+            return mutable
+        set_key('a')
+        len_before = len(mutable)
+        mutable_cached = set_key('a')
+        len_after = len(mutable)
+        self.assertEqual(len_before, len_after)
+        self.assertNotEqual(id(mutable), id(mutable_cached))
+        self.assertEqual(mutable, mutable_cached)
+
+    def test_decorator_complex_type(self):
+        import math
+
+        @cache_it(cache=self.c)
+        def add(x, y):
+            return ComplexNumber(x.real + y.real, x.imag + y.imag)
+        result = add(ComplexNumber(3,4), ComplexNumber(4,5))
+        result_cached = add(ComplexNumber(3,4), ComplexNumber(4,5))
+        self.assertNotEqual(id(result), id(result_cached))
+        self.assertEqual(result, result_cached)
+        self.assertEqual(result, complex(3,4) + complex(4,5))
+
+    def test_decorator_no_cache(self):
+        """ Testing the no_cache parameter which can be passed to a function to force a recalculated result """
+        self.counter = 0
+
+        @cache_it(cache=self.c)
+        def hard():
+            self.counter += 1
+            return 2 + 2
+
+        for _ in range(3):
+            hard()
+
+        self.assertEqual(self.counter, 1)
+
+        for _ in range(2):
+            hard(no_cache=True)
+
+        self.assertEqual(self.counter, 3) 
 
 main()

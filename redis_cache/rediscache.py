@@ -290,7 +290,7 @@ class SimpleCache(object):
         keys = list(self.connection.keys(namespace))
         with self.connection.pipeline() as pipe:
             pipe.delete(*keys)
-            pipe.srem(setname, *space)
+            pipe.srem(setname, *[key[key.find(':')+1:] for key in keys])
             pipe.execute()
 
     def get_hash(self, args):
@@ -323,10 +323,15 @@ def cache_it(limit=10000, expire=DEFAULT_EXPIRY, cache=None,
 
         @wraps(function)
         def func(*args, **kwargs):
+
+            kwargs = dict(kwargs)
+            if kwargs.get('no_cache'):
+                del kwargs['no_cache']
+                result = function(*args, **kwargs)
+
             ## Handle cases where caching is down or otherwise not available.
             if cache.connection is None:
-                result = function(*args, **kwargs)
-                return result
+                return result if result != None else function(*args, **kwargs)
 
             serializer = json if use_json else pickle
             fetcher = cache.get_json if use_json else cache.get_pickle
