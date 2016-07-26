@@ -31,16 +31,14 @@ class RedisConnect(object):
         :return: redis.StrictRedis Connection Object
         """
         try:
-            redis.StrictRedis(host=self.host, port=self.port, password=self.password).ping()
+            connection = redis.StrictRedis(host=self.host, port=self.port, password=self.password)
+            connection.ping()
         except redis.ConnectionError as e:
             raise RedisNoConnException("Failed to create connection to redis",
                                        (self.host,
                                         self.port)
             )
-        return redis.StrictRedis(host=self.host,
-                                 port=self.port,
-                                 db=self.db,
-                                 password=self.password)
+        return connection
 
 
 class CacheMissException(Exception):
