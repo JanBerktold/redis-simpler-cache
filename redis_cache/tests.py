@@ -1,7 +1,7 @@
 #SimpleCache Tests
 #~~~~~~~~~~~~~~~~~~~
 from datetime import timedelta
-from rediscache import SimpleCache, RedisConnect, cache_it, cache_it_json, CacheMissException, ExpiredKeyException, DoNotCache
+from rediscache import SimpleCache, RedisConnect, cache_it, cache_it_json, CacheMissException, ExpiredKeyException, DoNotCache, RedisNoConnException
 from unittest import TestCase, main
 import time
 
@@ -29,6 +29,19 @@ class ComplexNumber(object):  # used in pickle test
         return self.real == other.real and self.imag == other.imag
 
 
+class SetupTests(RedisTestCase):
+
+    def test_invalid_object(self):
+        with self.failUnlessRaises(RedisNoConnException):
+            SimpleCache(redis=ComplexNumber(2, 3))
+
+    def test_valid_redis(self):
+        redis = RedisConnect().connect()
+        cache = SimpleCache(redis=redis)
+
+        cache.store("foo", "bar")
+        self.assertEqual(cache.get("foo"), "bar")
+        
 class SimpleCacheTest(RedisTestCase):
 
     def test_expire(self):
