@@ -32,8 +32,8 @@ class ComplexNumber(object):  # used in pickle test
 class SetupTests(RedisTestCase):
 
     def test_invalid_object(self):
-        with self.failUnlessRaises(RedisNoConnException):
-            SimpleCache(redis=ComplexNumber(2, 3))
+        self.failUnlessRaises(RedisNoConnException,
+            SimpleCache, redis=ComplexNumber(2, 3))
 
     def test_valid_redis(self):
         redis = RedisConnect().connect()
@@ -41,7 +41,7 @@ class SetupTests(RedisTestCase):
 
         cache.store("foo", "bar")
         self.assertEqual(cache.get("foo"), "bar")
-        
+
 class SimpleCacheTest(RedisTestCase):
 
     def test_expire(self):
